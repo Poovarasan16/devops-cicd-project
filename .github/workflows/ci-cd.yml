@@ -57,26 +57,27 @@ jobs:
             ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:latest
           cache-to: type=inline
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=kubeconfig
           
-      - name: Deploy to Kubernetes
-        run: |
-          export KUBECONFIG=kubeconfig
-          kubectl set image deployment/devops-demo-app \
-            devops-demo-app=${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-          kubectl rollout status deployment/devops-demo-app
+  deploy:
+  needs: build
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/main'
+  
+  steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Configure kubeconfig
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+        kubectl config view
+
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl get nodes
+        kubectl set image deployment/devops-demo-app \
+          devops-demo-app=${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+        kubectl rollout status deployment/devops-demo-app
